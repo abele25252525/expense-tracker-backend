@@ -1,80 +1,66 @@
 package com.example.expensetracker.controller;
 
 import com.example.expensetracker.model.Expense;
-import com.example.expensetracker.repository.ExpenseRepository;
-import jakarta.servlet.http.HttpServletRequest;
+import com.example.expensetracker.service.ExpenseService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
-import java.time.LocalDate;
 
 @RestController
-@RequestMapping("/expenses")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/expenses")
 public class ExpenseController {
 
-    private final ExpenseRepository expenseRepository;
+    private final ExpenseService expenseService;
 
-    public ExpenseController(ExpenseRepository expenseRepository) {
-        this.expenseRepository = expenseRepository;
+    public ExpenseController(ExpenseService expenseService) {
+        this.expenseService = expenseService;
     }
 
-    // ➕ Create expense
+    // ✅ CREATE EXPENSE
     @PostMapping
-    public ResponseEntity<?> addExpense(@RequestBody Expense expense, HttpServletRequest request) {
-        String userId = (String) request.getAttribute("userId");
-        if (userId == null) return ResponseEntity.status(401).body("Unauthorized");
-
-        expense.setUserId(userId);
-        if (expense.getDate() == null) {
-            expense.setDate(LocalDate.now());
-        }
-        return ResponseEntity.ok(expenseRepository.save(expense));
+    public ResponseEntity<Expense> addExpense(
+            Authentication authentication,
+            @RequestBody Expense expense
+    ) {
+        expense.setUserEmail(authentication.getName());
+        Expense saved = expenseService.addExpense(expense);
+        return ResponseEntity.ok(saved);
     }
 
-    // 📄 Get all expenses by user
+    // ✅ GET ALL USER EXPENSES
     @GetMapping
-    public ResponseEntity<?> getUserExpenses(HttpServletRequest request) {
-        String userId = (String) request.getAttribute("userId");
-        if (userId == null) return ResponseEntity.status(401).body("Unauthorized");
-
-        List<Expense> expenses = expenseRepository.findByUserId(userId);
+    public ResponseEntity<List<Expense>> getExpenses(
+            Authentication authentication
+    ) {
+        List<Expense> expenses =
+                expenseService.getExpenses(authentication.getName());
         return ResponseEntity.ok(expenses);
     }
 
-    // ✏️ Update expense
+    // ✅ UPDATE EXPENSE
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateExpense(@PathVariable String id, @RequestBody Expense updatedExpense, HttpServletRequest request) {
-        String userId = (String) request.getAttribute("userId");
-        if (userId == null) return ResponseEntity.status(401).body("Unauthorized");
-
-        return expenseRepository.findById(id)
-                .map(expense -> {
-                    if (!expense.getUserId().equals(userId))
-                        return ResponseEntity.status(403).body("Forbidden");
-
-                    expense.setTitle(updatedExpense.getTitle());
-                    expense.setAmount(updatedExpense.getAmount());
-                    expense.setDate(updatedExpense.getDate());
-                    expense.setCategory(updatedExpense.getCategory());
-                    return ResponseEntity.ok(expenseRepository.save(expense));
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Expense> updateExpense(
+            @PathVariable String id,
+            Authentication authentication,
+            @RequestBody Expense expense
+    ) {
+        Expense updated = expenseService.updateExpense(
+                id,
+                authentication.getName(),
+                expense
+        );
+        return ResponseEntity.ok(updated);
     }
 
-    // ❌ Delete expense
+    // ✅ DELETE EXPENSE
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> deleteExpense(@PathVariable String id, HttpServletRequest request) {
-        String userId = (String) request.getAttribute("userId");
-        if (userId == null) return ResponseEntity.status(401).body("Unauthorized");
-
-        return expenseRepository.findById(id)
-                .map(expense -> {
-                    if (!expense.getUserId().equals(userId))
-                        return ResponseEntity.status(403).body("Forbidden");
-                    expenseRepository.delete(expense);
-                    return ResponseEntity.ok("Deleted successfully");
-                })
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<Void> deleteExpense(
+            @PathVariable String id,
+            Authentication authentication
+    ) {
+        expenseService.deleteExpense(id, authentication.getName());
+        return ResponseEntity.noContent().build();
     }
 }

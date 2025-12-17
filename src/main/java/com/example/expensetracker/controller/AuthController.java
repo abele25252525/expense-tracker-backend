@@ -1,55 +1,71 @@
 package com.example.expensetracker.controller;
 
+import com.example.expensetracker.config.JwtUtil;
+import com.example.expensetracker.dto.LoginResponse;
 import com.example.expensetracker.model.User;
-import com.example.expensetracker.repository.UserRepository;
-import com.example.expensetracker.security.JwtUtil;
+import com.example.expensetracker.service.AuthService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import java.util.*;
 
 @RestController
-@RequestMapping("/auth")
-@CrossOrigin(origins = "*")
+@RequestMapping("/api/auth")
 public class AuthController {
 
-    private final UserRepository userRepository;
-    private final BCryptPasswordEncoder passwordEncoder;
+    private final AuthService authService;
+    private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
 
-    public AuthController(UserRepository userRepository, JwtUtil jwtUtil) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = new BCryptPasswordEncoder();
+    public AuthController(
+            AuthService authService,
+            AuthenticationManager authenticationManager,
+            JwtUtil jwtUtil
+    ) {
+        this.authService = authService;
+        this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
     }
 
+    // ================= REGISTER =================
     @PostMapping("/register")
-    public ResponseEntity<?> registerUser(@RequestBody User user) {
-        if (userRepository.existsByEmail(user.getEmail())) {
-            return ResponseEntity.badRequest().body("Email already exists!");
+    public ResponseEntity<String> register(@RequestBody User user) {
+        try {
+            authService.register(user);
+            return ResponseEntity.ok("Registered successfully");
+        } catch (RuntimeException e) {
+            // Duplicate email
+            return ResponseEntity.status(409).body(e.getMessage());
         }
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
-        userRepository.save(user);
-        return ResponseEntity.ok("User registered successfully!");
     }
 
+    // ================= LOGIN =================
     @PostMapping("/login")
-    public ResponseEntity<?> loginUser(@RequestBody User user) {
-        Optional<User> existingUser = userRepository.findByEmail(user.getEmail());
+    public ResponseEntity<?> login(@RequestBody User user) {
+        try {
+            // Authenticate user
+            Authentication authentication = authenticationManager.authenticate(
+                    new UsernamePasswordAuthenticationToken(
+                            user.getEmail(),
+                            user.getPassword()
+                    )
+            );
 
-        if (existingUser.isEmpty()) {
-            return ResponseEntity.badRequest().body("User not found!");
+            // Get user details and generate JWT token
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            String token = jwtUtil.generateToken(userDetails);
+
+            // Return token
+            return ResponseEntity.ok(new LoginResponse(token));
+
+        } catch (AuthenticationException e) {
+            // Invalid email or password
+            return ResponseEntity
+                    .status(401)
+                    .body("{\"error\":\"Invalid email or password\"}");
         }
-
-        if (!passwordEncoder.matches(user.getPassword(), existingUser.get().getPassword())) {
-            return ResponseEntity.badRequest().body("Invalid password!");
-        }
-
-        String token = jwtUtil.generateToken(existingUser.get().getId());
-        Map<String, Object> response = new HashMap<>();
-        response.put("token", token);
-        response.put("user", existingUser.get());
-
-        return ResponseEntity.ok(response);
     }
 }

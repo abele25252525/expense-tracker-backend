@@ -1,23 +1,27 @@
 package com.example.expensetracker.model;
 
+import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
-import lombok.*;
 
 import java.time.LocalDate;
 
-@Document(collection = "expenses")
+@Document(collection = "budgets")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class Expense {
+public class Budget {
 
     @Id
     private String id;
 
     private String userEmail;
-    private String title;
-    private double amount;
-    private LocalDate date;
-    private String category;   // NEW
+
+    private double totalAmount;
+
+    // WEEK / MONTH / YEAR
+    private String period;
+
+    private LocalDate startDate;
+    private LocalDate endDate;
 }
