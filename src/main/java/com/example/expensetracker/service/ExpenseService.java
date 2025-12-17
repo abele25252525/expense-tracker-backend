@@ -38,7 +38,7 @@ public class ExpenseService {
             double totalSpent = spent == null ? 0 : spent;
 
             if (totalSpent + expense.getAmount()
-                    > budget.getTotalAmount()) {
+                    > budget.getAmount()) {
                 throw new RuntimeException("Budget exceeded");
             }
         }

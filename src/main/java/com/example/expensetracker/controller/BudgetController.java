@@ -36,11 +36,6 @@ public class BudgetController {
             return ResponseEntity
                     .status(HttpStatus.BAD_REQUEST)
                     .body(e.getMessage());
-
-        } catch (IllegalStateException e) {
-            return ResponseEntity
-                    .status(HttpStatus.CONFLICT)
-                    .body(e.getMessage());
         }
     }
 
@@ -60,9 +55,8 @@ public class BudgetController {
 
     // ================= REMAINING BUDGET =================
     @GetMapping("/remaining")
-    public ResponseEntity<Object> remaining(Authentication authentication) {
-        return ResponseEntity.ok(
-                budgetService.getRemainingBudget(authentication.getName())
-        );
+    public ResponseEntity<Double> remaining(Authentication authentication) {
+        double remaining = budgetService.getRemainingBudget(authentication.getName());
+        return ResponseEntity.ok(remaining);
     }
 }

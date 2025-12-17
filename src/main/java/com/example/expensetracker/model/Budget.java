@@ -17,7 +17,8 @@ public class Budget {
 
     private String userEmail;
 
-    private double totalAmount;
+    // TOTAL BUDGET AMOUNT
+    private double amount;
 
     // WEEK / MONTH / YEAR
     private String period;
