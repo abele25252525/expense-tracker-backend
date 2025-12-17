@@ -60,7 +60,7 @@ public class BudgetController {
 
     // ================= REMAINING BUDGET =================
     @GetMapping("/remaining")
-    public ResponseEntity<Double> remaining(Authentication authentication) {
+    public ResponseEntity<Object> remaining(Authentication authentication) {
         return ResponseEntity.ok(
                 budgetService.getRemainingBudget(authentication.getName())
         );
